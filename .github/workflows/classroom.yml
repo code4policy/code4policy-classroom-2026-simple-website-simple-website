@@ -1,0 +1,43 @@
+# Just check for 5 commits on main :(
+name: Simple Website Autograder
+on:
+  - push
+  - workflow_dispatch
+  - repository_dispatch
+permissions:
+  contents: read
+  actions: read
+  checks: write
+jobs:
+  run-autograding-tests:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-classroom[bot]'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Check commits
+      id: check-commits
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Check commits
+        command: |
+            REPO="${{ github.repository }}"
+            REPO="${REPO##*/}"
+
+            # 1. Strip assignment prefix
+            STUDENT="${REPO#simple-website-}"
+
+            # 2. Strip trailing -<digits> if present
+            STUDENT="$(echo "$STUDENT" | sed -E 's/-[0-9]+$//')"
+
+            echo "Student: $STUDENT"
+        timeout: 2
+        max-score: 10
+    - name: Autograding Reporter
+      uses: classroom-resources/autograding-grading-reporter@v1
+      env:
+        CHECK-COMMITS_RESULTS: "${{steps.check-commits.outputs.result}}"
+      with:
+        runners: check-commits
